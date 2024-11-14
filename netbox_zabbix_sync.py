@@ -65,19 +65,19 @@ def load_vault_content():
     
     
     # Get all virtual environment variables
-    if 'vault.ZABBIX_TOKEN' in globals():
+    if hasattr(vault, 'ZABBIX_TOKEN'):
         zabbix_user = None
         zabbix_pass = None
         zabbix_token = vault.ZABBIX_TOKEN
-    elif 'vault.ZABBIX_USER' in globals():
+    elif hasattr(vault, 'ZABBIX_USER'):
         zabbix_user = vault.ZABBIX_USER
         zabbix_pass = vault.ZABBIX_PASS
         zabbix_token = None
     else:
         raise EnvironmentVarError("No Zabbix credentials found in vault.py")
     
-    if 'vault.NETBOX_TOKEN' in globals():
-        netbox_token = vault.NETBOX_TOKEN
+    if hasattr(vault, 'NETBOX_TOKEN') and hasattr(vault, 'NETBOX_HOST'):
+        netbox_token = vault.NETBOX_TOKEN 
         netbox_host = vault.NETBOX_HOST
     else:
         raise EnvironmentVarError("No Netbox token found in vault.py")
