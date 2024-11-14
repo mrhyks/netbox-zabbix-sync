@@ -84,13 +84,11 @@ def load_vault_content():
     
     return zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host
 
-def main(arguments):
+def main():
     """Run the sync process."""
     # pylint: disable=too-many-branches, too-many-statements
     # set environment variables
     
-    if arguments.verbose:
-        logger.setLevel(logging.DEBUG)
     
     decrypt_vault()
     zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host = load_vault_content()
@@ -212,10 +210,4 @@ def main(arguments):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='A script to sync Zabbix with Netbox device data.'
-    )
-    parser.add_argument("-v", "--verbose", help="Turn on debugging.",
-                        action="store_true")
-    args = parser.parse_args()
-    main(args)
+    main()
