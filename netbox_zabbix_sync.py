@@ -96,6 +96,7 @@ def main():
     
     # Set Netbox API
     netbox = api(netbox_host, token=netbox_token, threading=True)
+    netbox.http_session.verify = False
     # Check if the provided Hostgroup layout is valid
     hg_objects = hostgroup_format.split("/")
     allowed_objects = ["dev_location", "dev_role", "manufacturer", "region",
