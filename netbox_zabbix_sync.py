@@ -69,10 +69,12 @@ def load_vault_content():
         zabbix_user = None
         zabbix_pass = None
         zabbix_token = vault.ZABBIX_TOKEN
+        zabbix_host = vault.ZABBIX_HOST
     elif hasattr(vault, 'ZABBIX_USER'):
         zabbix_user = vault.ZABBIX_USER
         zabbix_pass = vault.ZABBIX_PASS
         zabbix_token = None
+        zabbix_host = vault.ZABBIX_HOST
     else:
         raise EnvironmentVarError("No Zabbix credentials found in vault.py")
     
@@ -82,7 +84,7 @@ def load_vault_content():
     else:
         raise EnvironmentVarError("No Netbox token found in vault.py")
     
-    return zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host
+    return zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host, zabbix_host
 
 def main():
     """Run the sync process."""
@@ -91,7 +93,7 @@ def main():
     
     
     decrypt_vault()
-    zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host = load_vault_content()
+    zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host, zabbix_host = load_vault_content()
     encrypt_vault()
     
     # Set Netbox API
