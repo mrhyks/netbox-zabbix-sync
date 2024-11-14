@@ -4,12 +4,13 @@
 """Netbox to Zabbix sync script."""
 import logging
 import argparse
-from os import environ, path, sys
+from os import environ, path, sys, remove
 from pynetbox import api
 from zabbix_utils import ZabbixAPI, APIRequestError, ProcessingError
 from modules.device import NetworkDevice
 from modules.tools import convert_recordset, proxy_prepper
 from modules.exceptions import EnvironmentVarError, HostgroupError, SyncError
+import subprocess
 try:
     from config import (
         templates_config_context,
@@ -43,35 +44,58 @@ logger.addHandler(lgout)
 logger.addHandler(lgfile)
 logger.setLevel(logging.WARNING)
 
+
+VAULT_FILE = 'vault.py'
+DECRYPTED_FILE = 'decrypted_vault.py'
+VAULT_PASSWORD_FILE = 'vault_password.txt'  # Update this path
+VAULT_PASSWORD = environ.get('VAULT_PASSWORD')
+
+def decrypt_vault():
+    with open(VAULT_PASSWORD_FILE, 'w') as file:
+        file.write(VAULT_PASSWORD)
+    subprocess.run(['ansible-vault', 'decrypt', VAULT_FILE, '--output', DECRYPTED_FILE, '--vault-password-file', VAULT_PASSWORD_FILE], check=True)
+
+def encrypt_vault():
+    subprocess.run(['ansible-vault', 'encrypt', DECRYPTED_FILE, '--output', VAULT_FILE, '--vault-password-file', VAULT_PASSWORD_FILE], check=True)
+    remove(VAULT_PASSWORD_FILE)
+    remove(DECRYPTED_FILE)
+
+def load_vault_content():
+    import decrypted_vault as vault
+    
+    
+    # Get all virtual environment variables
+    if 'vault.ZABBIX_TOKEN' in globals():
+        zabbix_user = None
+        zabbix_pass = None
+        zabbix_token = vault.ZABBIX_TOKEN
+    elif 'vault.ZABBIX_USER' in globals():
+        zabbix_user = vault.ZABBIX_USER
+        zabbix_pass = vault.ZABBIX_PASS
+        zabbix_token = None
+    else:
+        raise EnvironmentVarError("No Zabbix credentials found in vault.py")
+    
+    if 'vault.NETBOX_TOKEN' in globals():
+        netbox_token = vault.NETBOX_TOKEN
+        netbox_host = vault.NETBOX_HOST
+    else:
+        raise EnvironmentVarError("No Netbox token found in vault.py")
+    
+    return zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host
+
 def main(arguments):
     """Run the sync process."""
     # pylint: disable=too-many-branches, too-many-statements
     # set environment variables
+    
     if arguments.verbose:
         logger.setLevel(logging.DEBUG)
-    env_vars = ["ZABBIX_HOST", "NETBOX_HOST", "NETBOX_TOKEN"]
-    if "ZABBIX_TOKEN" in environ:
-        env_vars.append("ZABBIX_TOKEN")
-    else:
-        env_vars.append("ZABBIX_USER")
-        env_vars.append("ZABBIX_PASS")
-    for var in env_vars:
-        if var not in environ:
-            e = f"Environment variable {var} has not been defined."
-            logger.error(e)
-            raise EnvironmentVarError(e)
-    # Get all virtual environment variables
-    if "ZABBIX_TOKEN" in env_vars:
-        zabbix_user = None
-        zabbix_pass = None
-        zabbix_token = environ.get("ZABBIX_TOKEN")
-    else:
-        zabbix_user = environ.get("ZABBIX_USER")
-        zabbix_pass = environ.get("ZABBIX_PASS")
-        zabbix_token = None
-    zabbix_host = environ.get("ZABBIX_HOST")
-    netbox_host = environ.get("NETBOX_HOST")
-    netbox_token = environ.get("NETBOX_TOKEN")
+    
+    decrypt_vault()
+    zabbix_user, zabbix_pass, zabbix_token, netbox_token, netbox_host = load_vault_content()
+    encrypt_vault()
+    
     # Set Netbox API
     netbox = api(netbox_host, token=netbox_token, threading=True)
     # Check if the provided Hostgroup layout is valid
